@@ -1,0 +1,23 @@
+# Python
+backend/venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.pytest_cache/
+
+# Editor
+.vscode/
+.idea/
+
+# Flask
+backend/instance/
+backend/.flaskenv
+
+# Environment variables
+.env
+
+# Image processing (if temp files are generated)
+*.png.tmp
+*.jpg.tmp
