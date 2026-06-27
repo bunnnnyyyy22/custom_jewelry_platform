@@ -37,6 +37,7 @@ def load_user(user_id):
 # ── 頁面路由 ──────────────────────────────────────────
 @app.route("/")
 def index():
+    logout_user()  # 每次回首頁都清除登入狀態
     return render_template("index.html")
 
 
