@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>客製化商品選擇</title>
+    <style>
+        :root {
+            --e-global-color-primary: #834300;
+            --e-global-color-secondary: #F9F5F0;
+            --e-global-color-text: #AC7032;
+            --e-global-color-accent: #F0CA74;
+        }
+        body { margin: 0; background: var(--e-global-color-secondary); color: var(--e-global-color-text); font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; min-height: 100vh; display: flex; justify-content: center; align-items: flex-start; }
+        .wrap { width: 100%; max-width: 1000px; padding: 48px 16px; text-align: center; }
+        h1 { margin: 0 0 8px; font-size: 34px; font-weight: 900; color: var(--e-global-color-text); }
+        .subtitle { margin: 0 0 28px; font-size: 14px; color: rgba(172,112,50,.7); }
+        .grid { display: grid; grid-template-columns: repeat(3, minmax(240px, 1fr)); gap: 18px; align-items: stretch; }
+        @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+        .card { background: rgba(255,255,255,.55); border: 1px solid rgba(172,112,50,.25); border-radius: 18px; padding: 18px; box-shadow: 0 12px 30px rgba(0,0,0,.08); display: flex; flex-direction: column; align-items: center; gap: 14px; }
+        .icon { width: 200px; max-width: 70%; aspect-ratio: 1/1; display: flex; justify-content: center; align-items: center; }
+        .icon img { width: 100%; height: 100%; object-fit: contain; display: block; }
+        .name { font-weight: 900; font-size: 22px; color: var(--e-global-color-text); margin-top: 2px; }
+        .badge-free { display: inline-block; background: #d4edda; color: #2e7d32; font-size: 11px; font-weight: 900; padding: 2px 10px; border-radius: 20px; margin-bottom: 2px; }
+        .badge-plus { display: inline-block; background: var(--e-global-color-accent); color: var(--e-global-color-primary); font-size: 11px; font-weight: 900; padding: 2px 10px; border-radius: 20px; margin-bottom: 2px; }
+        .desc { margin: 0; color: rgba(172,112,50,.95); line-height: 1.7; font-size: 14px; max-width: 340px; }
+        .btn-area { margin-top: 24px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+        .go-btn { margin-top: auto; border: none; cursor: pointer; padding: 12px 18px; border-radius: 14px; font-weight: 900; font-size: 16px; font-family: inherit; background: var(--e-global-color-accent); color: var(--e-global-color-primary); box-shadow: 0 10px 24px rgba(0,0,0,.12); transition: transform .05s ease; text-decoration: none; display: inline-block; }
+        .go-btn:active { transform: scale(.99); }
+        .go-btn--locked { margin-top: auto; padding: 12px 18px; border-radius: 14px; font-weight: 900; font-size: 16px; font-family: inherit; background: #e0d5c8; color: #b0a090; box-shadow: none; cursor: not-allowed; border: none; display: inline-block; opacity: 0.75; }
+        .btn-logout { border: 1px solid #c0392b; cursor: pointer; padding: 12px 22px; border-radius: 14px; font-weight: 900; font-size: 16px; font-family: inherit; background: transparent; color: #c0392b; transition: transform .05s ease, background .15s ease; }
+        .btn-logout:hover { background: rgba(192,57,43,0.08); }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <h1>選擇你要客製化的商品</h1>
+        <p class="subtitle">
+            {% if current_user.is_paid %}
+                ✅ Plus 訂閱中，已解鎖所有設計圖與下載功能
+            {% else %}
+                免費體驗：僅開放葉子設計圖，升級 Plus（NT$100/月）可解鎖全部
+            {% endif %}
+        </p>
+
+        <div class="grid">
+            <!-- 葉子：免費可進入 -->
+            <div class="card">
+                <div class="icon">
+                    <img src="{{ url_for('static', filename='assets/leaf.svg') }}" alt="葉子" />
+                </div>
+                <span class="badge-free">Free 免費體驗</span>
+                <div class="name">葉子</div>
+                <p class="desc">金屬 / 米珠 / 刺繡 / 毛氈可自由調色。</p>
+                <a class="go-btn" href="{{ url_for('leaf') }}">開始客製化</a>
+            </div>
+
+            <!-- 酪梨：Plus 限定 -->
+            <div class="card">
+                <div class="icon">
+                    <img src="{{ url_for('static', filename='assets/avocado.svg') }}" alt="酪梨" />
+                </div>
+                <span class="badge-plus">Plus 限定</span>
+                <div class="name">酪梨</div>
+                <p class="desc">酪梨本體多個部位可自由調色。</p>
+                {% if current_user.is_paid %}
+                    <a class="go-btn" href="{{ url_for('avocado') }}">開始客製化</a>
+                {% else %}
+                    <button class="go-btn--locked" disabled>🔒 升級 Plus 解鎖</button>
+                {% endif %}
+            </div>
+
+            <!-- 海星：Plus 限定 -->
+            <div class="card">
+                <div class="icon">
+                    <img src="{{ url_for('static', filename='assets/starfish.png') }}" alt="海星" />
+                </div>
+                <span class="badge-plus">Plus 限定</span>
+                <div class="name">海星</div>
+                <p class="desc">金屬 / 米珠 / 刺繡可自由調色。</p>
+                {% if current_user.is_paid %}
+                    <a class="go-btn" href="{{ url_for('starfish') }}">開始客製化</a>
+                {% else %}
+                    <button class="go-btn--locked" disabled>🔒 升級 Plus 解鎖</button>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="btn-area">
+            <a class="btn-logout" href="{{ url_for('logout') }}">登出</a>
+            {% if not current_user.is_paid %}
+                <button id="mockPayBtn" class="go-btn" type="button">💳 升級 Plus（NT$100/月）</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <script>
+        const mockPayBtn = document.getElementById("mockPayBtn");
+        if (mockPayBtn) {
+            mockPayBtn.addEventListener("click", () => {
+                fetch("{{ url_for('mock_pay') }}", { method: "POST" })
+                    .then(res => res.json())
+                    .then(data => {
+                        if (data.ok) {
+                            alert("✅ 升級成功！已解鎖所有設計圖與下載功能");
+                            location.reload();
+                        }
+                    });
+            });
+        }
+    </script>
+</body>
+</html>

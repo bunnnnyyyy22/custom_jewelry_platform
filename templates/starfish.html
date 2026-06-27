@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>海星 PNG 分層換色</title>
+    <style>
+        :root {
+            --e-global-color-primary: #834300;
+            --e-global-color-secondary: #F9F5F0;
+            --e-global-color-text: #AC7032;
+            --e-global-color-accent: #F0CA74;
+        }
+        body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--e-global-color-secondary); color: var(--e-global-color-text); display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
+        .wrap { width: 100%; max-width: 900px; padding: 36px 16px; text-align: center; }
+        h3 { margin: 0 0 18px 0; font-size: 24px; font-weight: 900; color: var(--e-global-color-text); }
+        .row { display: flex; gap: 12px; align-items: center; justify-content: center; margin: 12px 0; }
+        label { text-align: right; font-weight: 800; white-space: nowrap; }
+        input[type="color"] { width: 52px; height: 42px; padding: 0; border: none; border-radius: 10px; cursor: pointer; }
+        #previewWrap { width: 520px; max-width: 100%; margin: 18px auto 0 auto; }
+        #preview { width: 100%; height: auto; display: block; }
+        .btn-area { margin-top: 16px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+        button { border: none; cursor: pointer; padding: 12px 20px; border-radius: 14px; font-weight: 900; font-size: 16px; font-family: inherit; background: var(--e-global-color-accent); color: var(--e-global-color-primary); box-shadow: 0 10px 24px rgba(0,0,0,0.15); transition: transform 0.05s ease; }
+        button:active { transform: scale(0.99); }
+        .btn-secondary { background: transparent; color: var(--e-global-color-text); border: 1px solid var(--e-global-color-primary); box-shadow: none; }
+        .btn-secondary:hover { background: rgba(172,112,50,.08); }
+        .btn-logout { background: transparent; color: #c0392b; border: 1px solid #c0392b; box-shadow: none; }
+        .btn-logout:hover { background: rgba(192,57,43,0.08); }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <h3>客製化上色（PNG / Canvas）- 海星</h3>
+
+        <div class="row">
+            <label>金屬</label>
+            <input type="color" id="metalColor" value="#EBB14E">
+            <label>刺繡</label>
+            <input type="color" id="embroideryColor" value="#1E7FB6">
+            <label>米珠</label>
+            <input type="color" id="beadsColor" value="#8CCBE7">
+        </div>
+
+        <div id="previewWrap">
+            <canvas id="preview"></canvas>
+        </div>
+
+        <div class="btn-area">
+            <button id="backBtn" type="button" class="btn-secondary">← 返回商品選擇</button>
+            <button id="downloadBtn" type="button">下載 PNG</button>
+            <button id="logoutBtn" type="button" class="btn-logout">登出</button>
+        </div>
+    </div>
+
+    <script>
+        const LAYER_METAL_URL = "{{ url_for('static', filename='assets/273505.png') }}";
+        const LAYER_EMB_URL = "{{ url_for('static', filename='assets/273506.png') }}";
+        const LAYER_BEADS_URL = "{{ url_for('static', filename='assets/273507.png') }}";
+
+        function hexToRgb(hex) {
+            const h = hex.replace('#', '').trim();
+            const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+            const n = parseInt(full, 16);
+            return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+        }
+
+        function tintWithLuminance(img, targetHex) {
+            const { r: tr, g: tg, b: tb } = hexToRgb(targetHex);
+            const w = img.naturalWidth, h = img.naturalHeight;
+            const off = document.createElement('canvas');
+            off.width = w; off.height = h;
+            const octx = off.getContext('2d', { willReadFrequently: true });
+            octx.clearRect(0, 0, w, h);
+            octx.drawImage(img, 0, 0);
+            const imageData = octx.getImageData(0, 0, w, h);
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 4) {
+                if (data[i + 3] === 0) continue;
+                const lum = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+                const k = lum / 255;
+                data[i] = Math.round(tr * k);
+                data[i+1] = Math.round(tg * k);
+                data[i+2] = Math.round(tb * k);
+            }
+            octx.putImageData(imageData, 0, 0);
+            return off;
+        }
+
+        const canvas = document.getElementById("preview");
+        const ctx = canvas.getContext("2d", { willReadFrequently: true });
+        const metalColorEl = document.getElementById("metalColor");
+        const embroideryColorEl = document.getElementById("embroideryColor");
+        const beadsColorEl = document.getElementById("beadsColor");
+
+        const imgMetal = new Image();
+        const imgEmb = new Image();
+        const imgBeads = new Image();
+
+        let ready = 0;
+        function onLoaded() {
+            ready++;
+            if (ready === 3) initCanvasAndRender();
+        }
+
+        imgMetal.onload = onLoaded;
+        imgEmb.onload = onLoaded;
+        imgBeads.onload = onLoaded;
+        imgMetal.src = LAYER_METAL_URL;
+        imgEmb.src = LAYER_EMB_URL;
+        imgBeads.src = LAYER_BEADS_URL;
+
+        function initCanvasAndRender() {
+            const baseW = imgMetal.naturalWidth || imgEmb.naturalWidth || imgBeads.naturalWidth;
+            const baseH = imgMetal.naturalHeight || imgEmb.naturalHeight || imgBeads.naturalHeight;
+            const targetW = 520;
+            canvas.width = targetW;
+            canvas.height = Math.round(targetW * (baseH / baseW));
+            render();
+        }
+
+        function render() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.drawImage(tintWithLuminance(imgMetal, metalColorEl.value), 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(tintWithLuminance(imgEmb, embroideryColorEl.value), 0, 0, canvas.width, canvas.height);
+            ctx.drawImage(tintWithLuminance(imgBeads, beadsColorEl.value), 0, 0, canvas.width, canvas.height);
+        }
+
+        [metalColorEl, embroideryColorEl, beadsColorEl].forEach(el => {
+            el.addEventListener("input", render);
+        });
+
+        function downloadCurrentCanvasAsPNG({ bg = "#ffffff" } = {}) {
+            const out = document.createElement("canvas");
+            out.width = canvas.width; out.height = canvas.height;
+            const octx = out.getContext("2d");
+            octx.fillStyle = bg; octx.fillRect(0, 0, out.width, out.height);
+            octx.drawImage(canvas, 0, 0);
+            const a = document.createElement("a");
+            a.download = "customized_starfish.png";
+            a.href = out.toDataURL("image/png");
+            a.click();
+        }
+
+        document.getElementById("downloadBtn").addEventListener("click", () => {
+            downloadCurrentCanvasAsPNG({ bg: "#ffffff" });
+        });
+
+        document.getElementById("backBtn").addEventListener("click", () => {
+            window.location.href = "{{ url_for('shop') }}";
+        });
+
+        document.getElementById("logoutBtn").addEventListener("click", () => {
+            window.location.href = "{{ url_for('logout') }}";
+        });
+    </script>
+</body>
+</html>

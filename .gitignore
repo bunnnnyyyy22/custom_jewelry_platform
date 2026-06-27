@@ -1,45 +1,22 @@
-# ========= Python =========
-
-# 虛擬環境（你會建立 venv/venv）
-venv/
-.venv/
-
-# Python 快取
+# Python
 __pycache__/
-*.py[cod]
+*.pyc
+*.pyo
 
-# Flask instance 資料夾（如果你有用）
+# 虛擬環境
+venv/
+env/
+
+# Flask / SQLite 資料庫
 instance/
-
-# 環境變數/機密設定（建議你用 .env 管 WordPress 憑證）
-.env
-.env.*
-*.env
-
-# 資料庫檔（你的 config.py 用 sqlite 時會產生 app.db）
 *.db
-db.sqlite3
-app.db
+*.sqlite3
 
-# 日誌/暫存
-*.log
-*.tmp
+# 環境變數
+.env
 
-# ========= IDE / OS =========
+# macOS
 .DS_Store
-Thumbs.db
 
 # VSCode
 .vscode/
-
-# PyCharm
-.idea/
-
-# ========= 前端建置產物（如果你後續會用到 Node） =========
-node_modules/
-dist/
-build/
-
-# ========= 可能存在的上傳檔（如果你有做檔案上傳） =========
-uploads/
-static/uploads/

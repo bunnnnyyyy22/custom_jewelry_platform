@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>酪梨 SVG 圖層換色</title>
+    <style>
+        :root {
+            --e-global-color-primary: #834300;
+            --e-global-color-secondary: #F9F5F0;
+            --e-global-color-text: #AC7032;
+            --e-global-color-accent: #F0CA74;
+        }
+        body { margin: 0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--e-global-color-secondary); color: var(--e-global-color-text); display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; }
+        .wrap { width: 100%; max-width: 900px; padding: 36px 16px; text-align: center; }
+        h3 { margin: 0 0 18px 0; font-size: 24px; font-weight: 900; color: var(--e-global-color-text); }
+        .row { display: grid; justify-content: center; align-items: center; grid-template-columns: repeat(2, 120px 52px); column-gap: 14px; row-gap: 12px; margin: 12px 0; }
+        label { text-align: right; font-weight: 800; white-space: nowrap; }
+        input[type="color"] { width: 52px; height: 42px; padding: 0; border: none; border-radius: 10px; cursor: pointer; }
+        @media (max-width: 520px) { .row { grid-template-columns: 120px 52px; } }
+        #preview { width: 520px; max-width: 100%; margin: 18px auto 0 auto; }
+        #preview svg { display: block; margin: 0 auto; width: 100%; height: auto; }
+        .btn-area { margin-top: 16px; display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; }
+        button { border: none; cursor: pointer; padding: 12px 20px; border-radius: 14px; font-weight: 900; font-size: 16px; font-family: inherit; background: var(--e-global-color-accent); color: var(--e-global-color-primary); box-shadow: 0 10px 24px rgba(0,0,0,0.15); transition: transform 0.05s ease; }
+        button:active { transform: scale(0.99); }
+        .btn-secondary { background: transparent; color: var(--e-global-color-text); border: 1px solid var(--e-global-color-primary); box-shadow: none; }
+        .btn-secondary:hover { background: rgba(172,112,50,.08); }
+        .btn-logout { background: transparent; color: #c0392b; border: 1px solid #c0392b; box-shadow: none; }
+        .btn-logout:hover { background: rgba(192,57,43,0.08); }
+    </style>
+</head>
+<body>
+    <div class="wrap">
+        <h3>客製化上色（SVG）- 酪梨</h3>
+
+        <div class="row">
+            <label>金屬</label>
+            <input type="color" id="metalColor" value="#ebc159">
+            <label>米珠1</label>
+            <input type="color" id="beadsGreenColor" value="#5cad54">
+            <label>米珠2</label>
+            <input type="color" id="beadsGrassGreenColor" value="#d8d897">
+            <label>米珠(眼睛)</label>
+            <input type="color" id="eyesColor" value="#000000">
+            <label>刺繡(果核)</label>
+            <input type="color" id="pitColor" value="#7A3F2A">
+            <label>刺繡(葉柄)</label>
+            <input type="color" id="stalkColor" value="#7A3F2A">
+            <label>刺繡(葉子)</label>
+            <input type="color" id="leafColor" value="#2E7D32">
+            <label>刺繡(嘴巴)</label>
+            <input type="color" id="mouthColor" value="#000000">
+            <label>毛氈</label>
+            <input type="color" id="feltColor" value="#F4EAD3">
+        </div>
+
+        <div id="preview"></div>
+
+        <div class="btn-area">
+            <button id="backBtn" type="button" class="btn-secondary">← 返回商品選擇</button>
+            <button id="downloadBtn" type="button">下載 PNG</button>
+            <button id="logoutBtn" type="button" class="btn-logout">登出</button>
+        </div>
+    </div>
+
+    <script>
+        const SVG_URL = "{{ url_for('static', filename='assets/avocado.svg') }}";
+
+        const LAYERS = {
+            metal: "metal-part",
+            beadsGreen: "bead-green",
+            beadsGrassGreen: "bead-grass_green",
+            eyes: "eyes",
+            pit: "pit",
+            stalk: "stalk",
+            leaf: "leaf",
+            mouth: "mouth",
+            felt: "felt-border",
+        };
+
+        function hexToRgb(hex) {
+            const h = hex.replace('#', '').trim();
+            const full = h.length === 3 ? h.split('').map(c => c + c).join('') : h;
+            const n = parseInt(full, 16);
+            return { r: (n >> 16) & 255, g: (n >> 8) & 255, b: n & 255 };
+        }
+
+        function rgbToHsl(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h = 0, s = 0;
+            const l = (max + min) / 2;
+            const d = max - min;
+            if (d !== 0) {
+                s = d / (1 - Math.abs(2 * l - 1));
+                switch (max) {
+                    case r: h = ((g - b) / d) % 6; break;
+                    case g: h = (b - r) / d + 2; break;
+                    case b: h = (r - g) / d + 4; break;
+                }
+                h *= 60;
+                if (h < 0) h += 360;
+            }
+            return { h, s, l };
+        }
+
+        function getGroupBaseColor(groupEl) {
+            const elFill = groupEl.querySelector('[fill]:not([fill="none"])');
+            if (elFill) return elFill.getAttribute('fill');
+            const elStroke = groupEl.querySelector('[stroke]:not([stroke="none"])');
+            if (elStroke) return elStroke.getAttribute('stroke');
+            return null;
+        }
+
+        function applyHueTintToGroup(previewRoot, groupId, targetHex) {
+            const group = previewRoot.querySelector(`#${CSS.escape(groupId)}`);
+            if (!group) return;
+            const base = getGroupBaseColor(group);
+            if (!base || !base.startsWith('#')) return;
+            const baseHsl = rgbToHsl(...Object.values(hexToRgb(base)));
+            const targetHsl = rgbToHsl(...Object.values(hexToRgb(targetHex)));
+            let delta = targetHsl.h - baseHsl.h;
+            delta = ((delta + 540) % 360) - 180;
+            const satFactor = baseHsl.s > 0 ? (targetHsl.s / baseHsl.s) : 1;
+            group.style.filter = `hue-rotate(${delta}deg) saturate(${satFactor})`;
+        }
+
+        async function loadSVG() {
+            const res = await fetch(SVG_URL);
+            const svgText = await res.text();
+            document.getElementById("preview").innerHTML = svgText;
+            applyColors();
+        }
+
+        function applyColors() {
+            const preview = document.getElementById("preview");
+            applyHueTintToGroup(preview, LAYERS.metal, document.getElementById("metalColor").value);
+            applyHueTintToGroup(preview, LAYERS.beadsGreen, document.getElementById("beadsGreenColor").value);
+            applyHueTintToGroup(preview, LAYERS.beadsGrassGreen, document.getElementById("beadsGrassGreenColor").value);
+            applyHueTintToGroup(preview, LAYERS.eyes, document.getElementById("eyesColor").value);
+            applyHueTintToGroup(preview, LAYERS.pit, document.getElementById("pitColor").value);
+            applyHueTintToGroup(preview, LAYERS.stalk, document.getElementById("stalkColor").value);
+            applyHueTintToGroup(preview, LAYERS.leaf, document.getElementById("leafColor").value);
+            applyHueTintToGroup(preview, LAYERS.mouth, document.getElementById("mouthColor").value);
+            applyHueTintToGroup(preview, LAYERS.felt, document.getElementById("feltColor").value);
+        }
+
+        ["metalColor","beadsGreenColor","beadsGrassGreenColor","eyesColor","pitColor","stalkColor","leafColor","mouthColor","feltColor"].forEach(id => {
+            document.getElementById(id).addEventListener("input", applyColors);
+        });
+
+        loadSVG();
+
+        function downloadCurrentSVGAsPNG({ scale = 2, bg = "#ffffff" } = {}) {
+            const svgEl = document.querySelector("#preview svg");
+            if (!svgEl) { alert("找不到 SVG"); return; }
+            let vb = svgEl.getAttribute("viewBox");
+            let x = 0, y = 0, w = 0, h = 0;
+            if (vb) { [x, y, w, h] = vb.trim().split(/\s+/).map(Number); }
+            else { const bb = svgEl.getBBox(); x=bb.x; y=bb.y; w=bb.width; h=bb.height; }
+            const clone = svgEl.cloneNode(true);
+            clone.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+            clone.setAttribute("viewBox", `${x} ${y} ${w} ${h}`);
+            clone.setAttribute("width", w); clone.setAttribute("height", h);
+            let source = new XMLSerializer().serializeToString(clone);
+            if (!source.match(/^<svg[^>]+xmlns=/)) source = source.replace(/^<svg/, '<svg xmlns="http://www.w3.org/2000/svg"');
+            const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
+            const url = URL.createObjectURL(blob);
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = Math.round(w * scale); canvas.height = Math.round(h * scale);
+                const ctx = canvas.getContext("2d");
+                ctx.fillStyle = bg; ctx.fillRect(0, 0, canvas.width, canvas.height);
+                ctx.setTransform(scale, 0, 0, scale, 0, 0); ctx.drawImage(img, 0, 0);
+                URL.revokeObjectURL(url);
+                const a = document.createElement("a");
+                a.download = "customized_avocado.png"; a.href = canvas.toDataURL("image/png"); a.click();
+            };
+            img.onerror = () => { URL.revokeObjectURL(url); alert("匯出失敗"); };
+            img.src = url;
+        }
+
+        document.getElementById("downloadBtn").addEventListener("click", () => {
+            downloadCurrentSVGAsPNG({ scale: 2, bg: "#ffffff" });
+        });
+
+        document.getElementById("backBtn").addEventListener("click", () => {
+            window.location.href = "{{ url_for('shop') }}";
+        });
+
+        document.getElementById("logoutBtn").addEventListener("click", () => {
+            window.location.href = "{{ url_for('logout') }}";
+        });
+    </script>
+</body>
+</html>
